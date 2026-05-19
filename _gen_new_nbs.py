@@ -134,41 +134,69 @@ def nb00():
                 "interactions.head()"
             ),
             md(
-                "## 4. 📊 Møt Lea\n\n"
+                "### Hva betyr sparsiteten?\n\n"
+                "Over 99 % av matrisen er tom. Det betyr at en gjennomsnittlig bruker har sett\n"
+                "kanskje 50 av 10 000 filmer. Det meste vi *ikke* ser er ukjent — ikke mislikt.\n"
+                "Denne forskjellen er viktig: modellene våre må lære av det lille vi har,\n"
+                "uten å anta at fravær av klikk betyr avvisning."
+            ),
+            md(
+                "## 4. 📊 Møt Lea og Jonas\n\n"
                 "Lea (bruker 451) er en av StreamNords mest trofaste brukere — men de siste\n"
-                "ukene har hun nesten sluttet å klikke. La oss se hva hun faktisk har sett."
+                "ukene har hun nesten sluttet å klikke. La oss se hva hun faktisk har sett.\n\n"
+                "Jonas (bruker 102) elsker blockbustere — alt fra Marvel til Star Wars.\n"
+                "Han klikker på det meste som ligger på forsiden. Disse to representerer\n"
+                "ytterpunktene av brukerbasens vår: **nisjesmak vs mainstream**."
             ),
             code(
                 "LEA_ID = 451\n"
+                "JONAS_ID = 102\n\n"
                 "lea_items = interactions[interactions.user_id == LEA_ID].merge(items, on='item_id')\n"
-                "print(f'Lea har sett {len(lea_items)} filmer. De siste 10:')\n"
+                "jonas_items = interactions[interactions.user_id == JONAS_ID].merge(items, on='item_id')\n"
+                "print(f'Lea har sett {len(lea_items)} filmer. Jonas har sett {len(jonas_items)} filmer.')\n"
+                "print(f'\\nLeas siste 10 filmer:')\n"
                 "lea_items.tail(10)[['title'] + GENRE_COLS[:6]]"
             ),
             code(
+                "print('Jonas sine siste 10 filmer:')\n"
+                "jonas_items.tail(10)[['title'] + GENRE_COLS[:6]]"
+            ),
+            code(
                 "import matplotlib.pyplot as plt\n\n"
+                "fig, axes = plt.subplots(1, 2, figsize=(14, 5))\n\n"
                 "lea_genre_dist = lea_items[GENRE_COLS].sum().sort_values(ascending=True)\n"
-                "fig, ax = plt.subplots(figsize=(10, 5))\n"
-                "lea_genre_dist.plot.barh(ax=ax, color='coral')\n"
-                "ax.set_xlabel('Antall filmer')\n"
-                "ax.set_title('Leas sjangerfordeling')\n"
+                "lea_genre_dist.plot.barh(ax=axes[0], color='coral')\n"
+                "axes[0].set_xlabel('Antall filmer')\n"
+                "axes[0].set_title('Lea — sjangerfordeling')\n\n"
+                "jonas_genre_dist = jonas_items[GENRE_COLS].sum().sort_values(ascending=True)\n"
+                "jonas_genre_dist.plot.barh(ax=axes[1], color='steelblue')\n"
+                "axes[1].set_xlabel('Antall filmer')\n"
+                "axes[1].set_title('Jonas — sjangerfordeling')\n\n"
                 "plt.tight_layout()\n"
                 "plt.show()"
             ),
             md(
                 "## 🏋️ Før vi kjører noen modell\n\n"
-                "Skriv ned tre gjetninger før du ser resultatene:\n\n"
-                "1. Hva slags filmer tror du Lea vil ha anbefalt?\n"
-                "2. Hva tror du popularitetslisten vil inneholde?\n"
-                "3. Tror du popularitet vil gi Lea en god opplevelse? Hvorfor / hvorfor ikke?"
+                "Skriv ned gjetningene dine **før** du ser resultatene.\n"
+                "Vi kommer tilbake til disse i notebook 04 for å se om du hadde rett.\n\n"
+                "Vær så spesifikk du kan — det er lærerikt å ta feil."
             ),
             code(
-                "# DINE GJETNINGER (skriv i kommentarene)\n"
+                "# DINE GJETNINGER — fyll inn før du kjører neste celle\n"
                 "#\n"
-                "# 1. Lea vil sannsynligvis like: \n"
-                "# 2. Popularitetslisten inneholder trolig: \n"
-                "# 3. Popularitet fungerer / fungerer ikke for Lea fordi: \n"
+                "# 1. Hva slags filmer tror du Lea vil ha anbefalt?\n"
+                "#    Svar: \n"
                 "#\n"
-                "# Kom tilbake hit etter at popularitetsbaselinen har kjørt."
+                "# 2. Hva tror du popularitetslisten vil inneholde?\n"
+                "#    Svar: \n"
+                "#\n"
+                "# 3. Vil popularitet fungere bedre for Lea eller Jonas? Hvorfor?\n"
+                "#    Svar: \n"
+                "#\n"
+                "# 4. Hvor sikker er du på gjetning 3? (1 = ren gjetning, 5 = helt sikker)\n"
+                "#    Sikkerhet: \n"
+                "#\n"
+                "# Tips: Kom tilbake hit i notebook 04 og sammenlign."
             ),
             md(
                 "## 5. Hvilket signal har vi?\n\n"
@@ -184,13 +212,17 @@ def nb00():
             ),
             md(
                 "## 6. Evalueringsoppsett\n\n"
-                "Vi løser et **topp-N-rangeringsproblem**, ikke rating-prediksjon.\n\n"
+                "Vi løser et **topp-N-rangeringsproblem**: gitt en bruker, ranger alle filmer\n"
+                "slik at det brukeren *faktisk* vil se havner blant topp K.\n\n"
+                "### Leave-one-out-splitt\n\n"
+                "Vi gjemmer den siste filmen hver bruker så, og spør: ville modellen funnet den?\n"
+                "Vi bruker *siste*, ikke tilfeldig, fordi vi vil teste om modellen kan forutsi\n"
+                "hva som skjer *neste* — akkurat som i et ekte produkt.\n\n"
                 "### Metrikker\n\n"
-                "- **Recall@K**: fant vi relevant innhold i topp-K?\n"
-                "- **NDCG@K**: lå det høyt nok i listen?\n"
-                "- **MAP@K**: hvor tidlig dukker treffet opp?\n\n"
-                "I tillegg bruker vi en leave-one-out-splitt: siste interaksjon per bruker\n"
-                "holdes tilbake som test."
+                "- **Recall@K**: var den gjemte filmen blant topp-K? (traff vi i det hele tatt?)\n"
+                "- **NDCG@K**: lå treffet høyt i listen, eller måtte brukeren scrolle?\n"
+                "- **MAP@K**: belønner modeller som konsekvent plasserer treff tidlig\n\n"
+                "Vi bruker K=10 — en typisk forsidelengde i en strømmetjeneste."
             ),
             code(
                 "from src.split import leave_one_out_split, build_sparse_matrix\n"
@@ -229,23 +261,47 @@ def nb00():
             ),
             code(
                 "lea_idx = np.where(user_ids == LEA_ID)[0][0]\n"
-                "overlap_0_100 = len(set(recs_pop[0]) & set(recs_pop[100])) / K\n"
-                "overlap_0_lea = len(set(recs_pop[0]) & set(recs_pop[lea_idx])) / K\n"
-                "print(f'Overlapp bruker 0 vs bruker 100: {overlap_0_100:.0%}')\n"
-                "print(f'Overlapp bruker 0 vs Lea (451):  {overlap_0_lea:.0%}')\n\n"
-                "lea_titles = items.set_index('item_id').loc[recs_pop[lea_idx]]\n"
-                "print('\\nPopularitetsanbefalinger til Lea:')\n"
-                "for rank, (_, row) in enumerate(lea_titles.iterrows(), 1):\n"
-                "    genres = [genre for genre in GENRE_COLS if row.get(genre, 0) == 1]\n"
-                "    genre_label = ', '.join(genres[:3])\n"
-                "    print(f'  {rank:>2}. {row[\"title\"]}  [{genre_label}]')"
+                "jonas_idx = np.where(user_ids == JONAS_ID)[0][0]\n\n"
+                "overlap_lea_jonas = len(set(recs_pop[lea_idx]) & set(recs_pop[jonas_idx])) / K\n"
+                "print(f'Overlapp Lea vs Jonas: {overlap_lea_jonas:.0%}')\n"
+                "print('  → Begge får nesten identiske anbefalinger.\\n')\n\n"
+                "for name, uid, idx in [('Lea', LEA_ID, lea_idx), ('Jonas', JONAS_ID, jonas_idx)]:\n"
+                "    titles = items.set_index('item_id').loc[recs_pop[idx]]\n"
+                "    print(f'Popularitetsanbefalinger til {name} (bruker {uid}):')\n"
+                "    for rank, (_, row) in enumerate(titles.iterrows(), 1):\n"
+                "        genres = [g for g in GENRE_COLS if row.get(g, 0) == 1]\n"
+                "        print(f'  {rank:>2}. {row[\"title\"]}  [{\", \".join(genres[:3])}]')\n"
+                "    print()"
             ),
             md(
-                "Lea elsker nordisk indie-drama. Popularitetslisten gir henne mainstream.\n"
-                "**Noe stemmer ikke.**\n\n"
+                "> *Marte ser på listene:* «Vent — Lea og Jonas får *nesten det samme*?\n"
+                "> Hun ser indie-drama, han ser blockbustere, men vi anbefaler identisk?\n"
+                "> **Noe stemmer ikke.**»"
+            ),
+            code(
+                "# Sjangermismatch-visualisering: hva Lea liker vs hva hun får anbefalt\n"
+                "rec_items_lea = items.set_index('item_id').loc[recs_pop[lea_idx]]\n"
+                "rec_genres_lea = rec_items_lea[GENRE_COLS].sum()\n\n"
+                "fig, ax = plt.subplots(figsize=(10, 5))\n"
+                "x = np.arange(len(GENRE_COLS))\n"
+                "width = 0.35\n"
+                "lea_profile = lea_items[GENRE_COLS].sum()\n"
+                "lea_norm = lea_profile / lea_profile.sum()\n"
+                "rec_norm = rec_genres_lea / rec_genres_lea.sum()\n"
+                "ax.barh(x - width/2, lea_norm, width, label='Leas faktiske smak', color='coral')\n"
+                "ax.barh(x + width/2, rec_norm, width, label='Popularitetsanbefalinger', color='gray')\n"
+                "ax.set_yticks(x)\n"
+                "ax.set_yticklabels(GENRE_COLS)\n"
+                "ax.set_xlabel('Andel')\n"
+                "ax.set_title('Sjangermismatch: hva Lea liker vs hva hun får')\n"
+                "ax.legend()\n"
+                "plt.tight_layout()\n"
+                "plt.show()"
+            ),
+            md(
                 "> ✅ **Sjekk gjetningene dine**\n>\n"
                 "> Gå tilbake til gjetningene du skrev ned. Stemte de?\n"
-                "> Hva overrasket deg med popularitetslisten til Lea?"
+                "> Hva overrasket deg med sjangergrafen?"
             ),
             md(
                 "## Valgfri appendix — tilfeldig baseline\n\n"
@@ -328,7 +384,14 @@ def nb01():
             ),
             md(
                 "## 🏋️ Oppgave 1 — Innholdsbasert som første personalisering\n\n"
-                "Se på Recall-kolonnen under. Endrer metadata noe for Lea?"
+                "### Hvordan fungerer det?\n\n"
+                "1. Hver film beskrives som en sjangerfordeling (en rad med tall: 1 for action, 0 for drama, osv.)\n"
+                "2. Vi normaliserer radene slik at lange og korte vektorer kan sammenlignes rettferdig\n"
+                "3. **Brukerprofilen** er gjennomsnittet av sjangerfordelingen til filmene brukeren har sett —\n"
+                "   har Lea sett mye drama og lite action, peker profilen hennes i \u00abdrama-retningen\u00bb\n"
+                "4. Vi scorer hver usett film med **cosine similarity**: hvor mye overlapper filmens\n"
+                "   sjangervektor med Leas profil? Jo mer overlapp, jo høyere score\n\n"
+                "Les gjennom koden under og kjør den. Se spesielt på Recall — endrer metadata noe for Lea?"
             ),
             code(
                 "def recommend_content_based(train_matrix, genre_matrix, user_ids, k=10):\n"
@@ -348,7 +411,9 @@ def nb01():
                 "        scores = item_profiles @ user_profile\n"
                 "        scores[seen] = -np.inf\n"
                 "        recommendations[row_index] = np.argsort(-scores)[:k]\n"
-                "    return recommendations\n\n"
+                "    return recommendations"
+            ),
+            code(
                 "item_counts = np.asarray(train_matrix.sum(axis=0)).flatten()\n"
                 "global_ranking = np.argsort(-item_counts)\n\n"
                 "def recommend_popular(train_matrix, user_ids, k=10):\n"
@@ -357,32 +422,116 @@ def nb01():
                 "        seen = set(train_matrix[user_id].indices)\n"
                 "        unseen_popular = [item_id for item_id in global_ranking if item_id not in seen][:k]\n"
                 "        recommendations[row_index] = unseen_popular\n"
-                "    return recommendations\n\n"
+                "    return recommendations"
+            ),
+            code(
                 "recs_pop = recommend_popular(train_matrix, user_ids, k=K)\n"
                 "recs_cb = recommend_content_based(train_matrix, genre_matrix, user_ids, k=K)\n\n"
                 "print(f'Popularitet:    Recall@{K}={recall_at_k(recs_pop, test_items, K):.4f}  NDCG@{K}={ndcg_at_k(recs_pop, test_items, K):.4f}')\n"
                 "print(f'Innholdsbasert: Recall@{K}={recall_at_k(recs_cb, test_items, K):.4f}  NDCG@{K}={ndcg_at_k(recs_cb, test_items, K):.4f}')"
             ),
             code(
+                "LEA_ID = 451\n"
+                "JONAS_ID = 102\n"
                 "lea_idx = np.where(user_ids == LEA_ID)[0]\n"
-                "if len(lea_idx) > 0:\n"
-                "    for name, recs in [('Popularitet', recs_pop), ('Innholdsbasert', recs_cb)]:\n"
-                "        lea_recs = recs[lea_idx[0]]\n"
-                "        titles = items.set_index('item_id').loc[lea_recs, 'title'].values\n"
-                "        print(f'\\n{name}:')\n"
-                "        for rank, title in enumerate(titles, 1):\n"
-                "            print(f'  {rank:>2}. {title}')"
+                "jonas_idx = np.where(user_ids == JONAS_ID)[0]\n\n"
+                "for uid, name, idx in [(LEA_ID, 'Lea', lea_idx), (JONAS_ID, 'Jonas', jonas_idx)]:\n"
+                "    if len(idx) > 0:\n"
+                "        for model_name, recs in [('Popularitet', recs_pop), ('Innholdsbasert', recs_cb)]:\n"
+                "            rec_items = recs[idx[0]]\n"
+                "            titles = items.set_index('item_id').loc[rec_items, 'title'].values\n"
+                "            print(f'\\n{name} — {model_name}:')\n"
+                "            for rank, title in enumerate(titles, 1):\n"
+                "                print(f'  {rank:>2}. {title}')"
             ),
             md(
                 "> 💬 **Diskuter**\n>\n"
-                "> 1. Hjelper metadata Lea mer enn popularitet gjør? Hvordan ser du det?\n"
+                "> 1. Hjelper metadata Lea mer enn Jonas? Hvorfor gjør den det?\n"
                 "> 2. Når er innholdsbasert filtering spesielt nyttig i praksis?\n"
                 "> 3. Hva er den største svakheten ved å bruke bare metadata?"
             ),
             md(
+                "## 🏋️ Oppgave 1b — Eksperimenter med vekting\n\n"
+                "Innholdsbasert-modellen bruker `mean` over alle filmene brukeren har sett.\n"
+                "Hva skjer om vi vekter nyere filmer høyere? Fyll inn `???` under og kjør."
+            ),
+            code(
+                "def recommend_cb_weighted(train_matrix, genre_matrix, user_ids, interactions, k=10):\n"
+                "    \"\"\"Innholdsbasert med recency-vekting. Fyll inn koden som mangler.\"\"\"\n"
+                "    genre_norms = np.linalg.norm(genre_matrix, axis=1, keepdims=True)\n"
+                "    genre_norms = np.where(genre_norms == 0, 1.0, genre_norms)\n"
+                "    item_profiles = genre_matrix / genre_norms\n"
+                "    recommendations = np.zeros((len(user_ids), k), dtype=np.int32)\n\n"
+                "    for row_index, user_id in enumerate(user_ids):\n"
+                "        seen = train_matrix[user_id].indices\n"
+                "        if len(seen) == 0:\n"
+                "            recommendations[row_index] = np.arange(k)\n"
+                "            continue\n\n"
+                "        # --- FYLL INN ---\n"
+                "        # I stedet for ren mean, vekt de siste N filmene høyere.\n"
+                "        # Hint: bruk interactions for å finne rekkefølge,\n"
+                "        # og gi de siste 10 filmene dobbel vekt.\n"
+                "        user_profile = item_profiles[seen].mean(axis=0)  # ← erstatt med vektet versjon\n"
+                "        # ----------------\n\n"
+                "        profile_norm = np.linalg.norm(user_profile)\n"
+                "        if profile_norm > 0:\n"
+                "            user_profile = user_profile / profile_norm\n"
+                "        scores = item_profiles @ user_profile\n"
+                "        scores[seen] = -np.inf\n"
+                "        recommendations[row_index] = np.argsort(-scores)[:k]\n"
+                "    return recommendations\n\n"
+                "recs_cb_w = recommend_cb_weighted(train_matrix, genre_matrix, user_ids, interactions, k=K)\n"
+                "print(f'CB vektet: Recall@{K}={recall_at_k(recs_cb_w, test_items, K):.4f}')\n"
+                "print('Hint: resultatet er likt som vanlig CB akkurat nå — det er meningen.')"
+            ),
+            md(
+                "### 💡 Fasit — Oppgave 1b\n\n"
+                "> **Prøv selv først.** Rull ned kun når du har gjort et forsøk.\n\n"
+                "---"
+            ),
+            code(
+                "# FASIT — recency-vektet brukerprofil\n"
+                "#\n"
+                "# Idé: finn de siste 10 filmene brukeren så (sortert på timestamp)\n"
+                "# og gi dem dobbel vekt i gjennomsnittet.\n\n"
+                "def recommend_cb_weighted_fasit(train_matrix, genre_matrix, user_ids, interactions, k=10):\n"
+                "    genre_norms = np.linalg.norm(genre_matrix, axis=1, keepdims=True)\n"
+                "    genre_norms = np.where(genre_norms == 0, 1.0, genre_norms)\n"
+                "    item_profiles = genre_matrix / genre_norms\n"
+                "    recommendations = np.zeros((len(user_ids), k), dtype=np.int32)\n\n"
+                "    for row_index, user_id in enumerate(user_ids):\n"
+                "        seen = train_matrix[user_id].indices\n"
+                "        if len(seen) == 0:\n"
+                "            recommendations[row_index] = np.arange(k)\n"
+                "            continue\n\n"
+                "        # Finn de siste 10 filmene sortert på timestamp\n"
+                "        user_history = interactions[interactions.user_id == user_id].sort_values('timestamp')\n"
+                "        recent_items = set(user_history['item_id'].values[-10:])\n\n"
+                "        # Gi nylige filmer dobbel vekt\n"
+                "        weights = np.array([2.0 if item_id in recent_items else 1.0 for item_id in seen])\n"
+                "        weights = weights / weights.sum()\n\n"
+                "        user_profile = (item_profiles[seen] * weights[:, None]).sum(axis=0)\n"
+                "        profile_norm = np.linalg.norm(user_profile)\n"
+                "        if profile_norm > 0:\n"
+                "            user_profile = user_profile / profile_norm\n"
+                "        scores = item_profiles @ user_profile\n"
+                "        scores[seen] = -np.inf\n"
+                "        recommendations[row_index] = np.argsort(-scores)[:k]\n"
+                "    return recommendations\n\n"
+                "recs_cb_fasit = recommend_cb_weighted_fasit(train_matrix, genre_matrix, user_ids, interactions, k=K)\n"
+                "print(f'CB uvektet: Recall@{K}={recall_at_k(recs_cb, test_items, K):.4f}')\n"
+                "print(f'CB vektet:  Recall@{K}={recall_at_k(recs_cb_fasit, test_items, K):.4f}')\n"
+                "print('\\n→ Recency-vekting hjelper ikke alltid på Recall — smaken endrer seg sjelden drastisk.')\n"
+                "print('  Men for brukere i transisjon (ny sjanger) kan det gi bedre treff.')"
+            ),
+            md(
                 "### ✏️ Skriveøvelse\n\n"
-                "Skriv **én setning** til Marte som forklarer forskjellen mellom popularitet\n"
-                "og innholdsbasert filtering — uten å bruke ordene *vektor*, *matrise* eller *cosine*.\n\n"
+                "Marte spør: *«Hva er egentlig forskjellen på de to modellene vi har testet?»*\n\n"
+                "Skriv **to-tre setninger** til Marte som forklarer forskjellen mellom popularitet\n"
+                "og innholdsbasert filtering. Regler:\n\n"
+                "- Bruk gjerne ord som *profil* og *likhet*, men forklar dem som om Marte aldri har tatt et mattekurs\n"
+                "- Forklar hvorfor den ene hjelper Lea mer enn den andre\n"
+                "- Nevn én situasjon der den innholdsbaserte modellen er spesielt nyttig\n\n"
                 "> *«Marte, forskjellen er at ...»*"
             ),
             md(
@@ -445,14 +594,18 @@ def nb02():
             md(
                 "## Fra nabolag til latente faktorer\n\n"
                 "### Item-item collaborative filtering\n\n"
-                "Vi slutter å lese filmomslaget og spør i stedet: *hvem andre så denne filmen,\n"
-                "og hva så de etterpå?* Det er lett å forstå og gir en god inngang til\n"
-                "collaborative filtering.\n\n"
+                "I notebook 01 sammenlignet vi filmer basert på sjangeretiketter. Nå snur vi\n"
+                "perspektivet: i stedet for å lese filmomslaget spør vi *hvem andre så denne filmen,\n"
+                "og hva så de etterpå?*\n\n"
+                "Teknisk gjør vi dette ved å transponere interaksjonsmatrisen: rader blir filmer,\n"
+                "kolonner blir brukere. Cosine similarity mellom to filmer måler da hvor mye\n"
+                "de deler publikum — uavhengig av sjanger. To filmer kan være like fordi\n"
+                "de *samme menneskene* liker dem, selv om én er en thriller og den andre er drama.\n\n"
                 "### Matrix factorization\n\n"
                 "I stedet for å sammenligne rå item-vektorer direkte, lærer vi latente faktorer:\n\n"
                 "$$R \\approx U \\cdot V^T$$\n\n"
                 "Her er $U$ brukerfaktorer og $V$ itemfaktorer. ALS er en effektiv måte å lære dette\n"
-                "på for store, sparsomme implisitte datasett."
+                "på for store, sparsomme implisitte datasett. Mer om dette etter Oppgave 2."
             ),
             md("## Oppsett"),
             code(
@@ -475,7 +628,8 @@ def nb02():
                 "LEA_ID = 451\n\n"
                 "print(f'Matrise: {train_matrix.shape}, nnz={train_matrix.nnz:,}')"
             ),
-            md("## 🏋️ Oppgave 2 — Inspiser item-likhet"),
+            md("## 🏋️ Oppgave 2 — Inspiser item-likhet\n\n"
+                "La oss se hvordan co-view-basert likhet fungerer. Først noen eksempler:"),
             code(
                 "item_sim = cosine_similarity(train_matrix.T, dense_output=True)\n"
                 "np.fill_diagonal(item_sim, 0.0)\n"
@@ -492,6 +646,27 @@ def nb02():
                 "            print(f'  {item_sim[item_id, neighbor_id]:.3f}  {neighbor_row.iloc[0][\"title\"]}')"
             ),
             md(
+                "### 🏋️ Oppgave 2b — Velg din egen film\n\n"
+                "Finn en film du kjenner i katalogen og se hvem naboene er.\n"
+                "Gir resultatet mening? Hva fanger likheten som sjanger alene ikke ser?"
+            ),
+            code(
+                "# Fyll inn en tittel du kjenner (eller del av tittelen)\n"
+                "SEARCH_TITLE = 'Matrix'  # <-- endre dette\n\n"
+                "matches = items[items['title'].str.contains(SEARCH_TITLE, case=False, na=False)]\n"
+                "if len(matches) == 0:\n"
+                "    print(f'Fant ingen filmer med \"{SEARCH_TITLE}\" i tittelen.')\n"
+                "else:\n"
+                "    chosen = matches.iloc[0]\n"
+                "    chosen_id = chosen['item_id']\n"
+                "    neighbors = np.argsort(-item_sim[chosen_id])[:5]\n"
+                "    print(f'Naboer til \"{chosen[\"title\"]}\":')\n"
+                "    for neighbor_id in neighbors:\n"
+                "        nb_row = items[items.item_id == neighbor_id]\n"
+                "        if len(nb_row) > 0:\n"
+                "            print(f'  {item_sim[chosen_id, neighbor_id]:.3f}  {nb_row.iloc[0][\"title\"]}')"
+            ),
+            md(
                 "> 💬 **Diskuter**\n>\n"
                 "> 1. Ser naboskapet meningsfullt ut?\n"
                 "> 2. Hva fanger item-item-likheten som metadata alene ikke så godt viser?\n"
@@ -499,23 +674,40 @@ def nb02():
             ),
             md(
                 "## 🏋️ Oppgave 3 — Head-to-head: item-item vs ALS\n\n"
-                "Nå setter vi de to mot hverandre. Se spesielt på Recall og NDCG —\n"
+                "### Hva er ALS, og hvorfor fungerer det?\n\n"
+                "Tenk deg at hver bruker har en skjult smaksprofil med ~64 dimensjoner —\n"
+                "kanskje «liker spenning», «foretrekker visuelt vakre filmer», «liker komplekse plott».\n"
+                "Hver film har en tilsvarende profil. **ALS prøver å gjette disse profilene**\n"
+                "slik at brukerprofil · filmprofil ≈ hvor mye brukeren likte filmen.\n\n"
+                "Vi kaller dem *latente* faktorer fordi vi ikke velger dem — de læres\n"
+                "automatisk fra data. De trenger ikke tilsvare sjangre; de kan fange\n"
+                "subtile mønstre som «stemning» eller «regi-stil».\n\n"
+                "**ALS (Alternating Least Squares)** veksler mellom å oppdatere brukerprofiler\n"
+                "og filmprofiler — litt som å løse et puslespill fra to sider samtidig.\n"
+                "Det gjør den i 15 runder, og når det er ferdig har vi en komprimert\n"
+                "representasjon som fanger sammenhenger item-item ikke ser.\n\n"
+                "La oss se om det gjør en forskjell. Se spesielt på Recall og NDCG —\n"
                 "tar ALS et tydelig sprang?"
             ),
             code(
                 "def recommend_item_item(item_sim, train_matrix, user_ids, k=10):\n"
+                "    # Compute all user scores in one vectorized BLAS call:\n"
+                "    # sparse (n_users × n_items) @ dense (n_items × n_items) → (n_users × n_items)\n"
+                "    all_scores = train_matrix[user_ids].dot(item_sim)  # shape: (n_users, n_items)\n"
                 "    recommendations = np.zeros((len(user_ids), k), dtype=np.int32)\n"
                 "    for row_index, user_id in enumerate(user_ids):\n"
-                "        user_vector = train_matrix[user_id]\n"
-                "        scores = item_sim @ user_vector.T\n"
-                "        scores = np.asarray(scores).flatten()\n"
-                "        scores[user_vector.indices] = -np.inf\n"
+                "        scores = all_scores[row_index].A1 if hasattr(all_scores[row_index], 'A1') else all_scores[row_index]\n"
+                "        scores[train_matrix[user_id].indices] = -np.inf\n"
                 "        recommendations[row_index] = np.argsort(-scores)[:k]\n"
                 "    return recommendations\n\n"
-                "recs_item_item = recommend_item_item(item_sim, train_matrix, user_ids, k=K)\n\n"
+                "recs_item_item = recommend_item_item(item_sim, train_matrix, user_ids, k=K)"
+            ),
+            code(
                 "als = AlternatingLeastSquares(factors=64, regularization=0.01, iterations=15, random_state=42, use_gpu=False)\n"
                 "als.fit(train_matrix, show_progress=True)\n"
-                "recs_als = als.recommend(user_ids, train_matrix[user_ids], N=K, filter_already_liked_items=True)[0]\n\n"
+                "recs_als = als.recommend(user_ids, train_matrix[user_ids], N=K, filter_already_liked_items=True)[0]"
+            ),
+            code(
                 "for name, recs in [('Item-item', recs_item_item), ('ALS', recs_als)]:\n"
                 "    recall_value = recall_at_k(recs, test_items, K)\n"
                 "    ndcg_value = ndcg_at_k(recs, test_items, K)\n"
@@ -523,17 +715,23 @@ def nb02():
                 "    print(f'{name:<10} Recall@{K}={recall_value:.4f}  NDCG@{K}={ndcg_value:.4f}  MAP@{K}={map_value:.4f}')"
             ),
             code(
+                "LEA_ID = 451\n"
+                "JONAS_ID = 102\n"
                 "lea_idx = np.where(user_ids == LEA_ID)[0]\n"
-                "if len(lea_idx) > 0:\n"
-                "    for name, recs in [('Item-item', recs_item_item), ('ALS', recs_als)]:\n"
-                "        lea_recs = recs[lea_idx[0]]\n"
-                "        titles = items.set_index('item_id').loc[lea_recs, 'title'].values\n"
-                "        print(f'\\n{name}:')\n"
-                "        for rank, title in enumerate(titles, 1):\n"
-                "            print(f'  {rank:>2}. {title}')"
+                "jonas_idx = np.where(user_ids == JONAS_ID)[0]\n\n"
+                "for uid, name, idx in [(LEA_ID, 'Lea', lea_idx), (JONAS_ID, 'Jonas', jonas_idx)]:\n"
+                "    if len(idx) > 0:\n"
+                "        for model_name, recs in [('Item-item', recs_item_item), ('ALS', recs_als)]:\n"
+                "            rec_items = recs[idx[0]]\n"
+                "            titles = items.set_index('item_id').loc[rec_items, 'title'].values\n"
+                "            print(f'\\n{name} — {model_name}:')\n"
+                "            for rank, title in enumerate(titles, 1):\n"
+                "                print(f'  {rank:>2}. {title}')"
             ),
             md(
-                "ALS tar et tydelig sprang. Se på Leas lister — ser du forskjellen?\n\n"
+                "> *Marte ser på tallene:* «Recall gikk opp — men ser Lea **faktisk** bedre filmer?\n"
+                "> Og hva med Jonas — forandret det noe for ham?»\n\n"
+                "ALS tar et tydelig sprang. Se på listene — ser du forskjellen?\n\n"
                 "> 💬 **Diskuter**\n>\n"
                 "> 1. Hvorfor vinner ALS ofte over item-item?\n"
                 "> 2. Hva er forskjellen på en nabolagsmetode og latente faktorer?\n"
@@ -550,7 +748,8 @@ def nb02():
                 "---\n\n"
                 "> *Marte:* «Bra. Nå ser det ut som Lea kan få bedre anbefalinger.\n"
                 "> Men fungerer dette for *alle* — eller bare for mainstream-brukerne?\n"
-                "> Og hva skjer når vi må blande signaler og ta fairness på alvor?»\n\n"
+                "> Og hva skjer når vi må blande signaler og ta fairness på alvor?\n"
+                "> Amira spør allerede.»\n\n"
                 "**Neste steg** → `03_hybrid_systems.ipynb`"
             ),
             md(
@@ -621,7 +820,7 @@ def nb03():
                 "from implicit.als import AlternatingLeastSquares\n"
                 "from src.data import load_interactions, load_item_metadata, load_sessions, get_genre_matrix\n"
                 "from src.split import leave_one_out_split, build_sparse_matrix, session_train_test_split\n"
-                "from src.metrics import recall_at_k, coverage, novelty\n"
+                "from src.metrics import recall_at_k, coverage, novelty, intra_list_similarity\n"
                 "from src.fairness import popularity_bias_analysis, genre_calibration_score, group_recall_comparison\n"
                 "from src.rerank import mmr_rerank\n\n"
                 "interactions = load_interactions()\n"
@@ -643,7 +842,21 @@ def nb03():
                 "item_pop_frac = item_pop_counts / n_users\n\n"
                 "print('Oppsett ferdig')"
             ),
-            md("## 🏋️ Oppgave 4 — Korttidskontekst som hybridsignal"),
+            md(
+                "## 🏋️ Oppgave 4 — Korttidskontekst som hybridsignal\n\n"
+                "### Hva er en sesjon?\n\n"
+                "En sesjon er en sammenhengende rekke handlinger — for eksempel filmene Lea ser\n"
+                "i løpet av en kveld. Rekkefølgen betyr noe: hvis hun ser en thriller og deretter\n"
+                "en annen thriller, sier det noe om hva hun er i humør for *akkurat nå*.\n\n"
+                "### Hvorfor trenger vi sesjonskontekst?\n\n"
+                "ALS kjenner Leas langtidsprofil — hvem hun er generelt. Men den vet ikke\n"
+                "at hun akkurat nå sitter i sofaen og vil ha spenning, ikke drama.\n"
+                "Sesjonskontekst fanger opp dette korttidshumøret.\n\n"
+                "### Hvordan fungerer det?\n\n"
+                "Vi teller: etter film A, hva ser folk typisk etterpå? Det gir oss en\n"
+                "**overgangsmatrise** — en slags «hva kommer neste»-tabell. Kombinert\n"
+                "med ALS-profilen gir den oss det beste fra to verdener."
+            ),
             code(
                 "sess_sizes = sessions.groupby('session_id').size()\n"
                 "print(f'Antall sesjoner: {len(sess_sizes):,}')\n"
@@ -651,6 +864,11 @@ def nb03():
                 "lea_sessions = sessions[sessions.user_id == LEA_ID]\n"
                 "lea_session_ids = lea_sessions.session_id.unique()\n"
                 "print(f'Lea har {len(lea_session_ids)} sesjoner')"
+            ),
+            md(
+                "### Bygg overgangsmatrise fra sesjoner\n\n"
+                "Vi teller hvor ofte item A etterfølges av item B i samme sesjon,\n"
+                "og normaliserer til sannsynligheter."
             ),
             code(
                 "train_sessions, test_sessions = session_train_test_split(sessions, interactions)\n"
@@ -665,9 +883,21 @@ def nb03():
                 "transition = counts.tocsr()\n"
                 "row_sums = np.asarray(transition.sum(axis=1)).flatten()\n"
                 "row_sums[row_sums == 0] = 1.0\n"
-                "transition = diags(1.0 / row_sums) @ transition\n\n"
-                "def recommend_session_blend(als_model, transition, test_sessions, train_matrix, k=10, lambda_=0.7):\n"
-                "    dense_transition = transition.toarray() if hasattr(transition, 'toarray') else transition\n"
+                "transition = diags(1.0 / row_sums) @ transition\n"
+                "print(f'Overgangsmatrise: {transition.shape}, nnz={transition.nnz:,}')"
+            ),
+            md(
+                "### Blend ALS-profil med sesjonskontekst\n\n"
+                "Vi blander to signaler: ALS sin langtidsprofil (hvem er Lea generelt?)\n"
+                "med sesjonens korttidssignal (hva ser hun akkurat nå?).\n\n"
+                "`lambda_` styrer blandingen: 1.0 = bare ALS, 0.0 = bare sesjon.\n"
+                "Ingen av delene alene er nok — bare ALS ignorerer øyeblikket,\n"
+                "bare sesjon glemmer hvem brukeren er."
+            ),
+            code(
+                "def recommend_session_blend(als_model, transition, test_sessions,\n"
+                "                           train_matrix, k=10, lambda_=0.7):\n"
+                "    dense_transition = transition.toarray()\n"
                 "    recommendations, ground_truth = [], []\n"
                 "    for _, group in test_sessions.groupby('session_id'):\n"
                 "        group = group.sort_values('position')\n"
@@ -693,9 +923,12 @@ def nb03():
                 "                blended[seen_item] = -np.inf\n"
                 "        recommendations.append(np.argsort(-blended)[:k])\n"
                 "        ground_truth.append(target_item)\n"
-                "    return np.array(recommendations), np.array(ground_truth)\n\n"
+                "    return np.array(recommendations), np.array(ground_truth)"
+            ),
+            code(
                 "for lambda_value in [0.0, 0.7, 1.0]:\n"
-                "    recs, targets = recommend_session_blend(als, transition, test_sessions, train_matrix, k=K, lambda_=lambda_value)\n"
+                "    recs, targets = recommend_session_blend(als, transition, test_sessions,\n"
+                "                                           train_matrix, k=K, lambda_=lambda_value)\n"
                 "    print(f'lambda={lambda_value:.1f}: Recall@{K}={recall_at_k(recs, targets, K):.4f}')"
             ),
             md(
@@ -706,7 +939,12 @@ def nb03():
             ),
             md(
                 "## 🏋️ Oppgave 5 — Fairness og reranking\n\n"
-                "Høy gjennomsnittlig Recall betyr ikke at alle brukere er fornøyde.\n"
+                "Til nå har vi målt Recall som et gjennomsnitt over alle brukere. Men et gjennomsnitt\n"
+                "kan skjule at modellen fungerer bra for mainstream-brukere og dårlig for nisjeprofiler.\n"
+                "Fairness handler om å måle *hvem* som tjener — og hvem som taper.\n\n"
+                "> *Amira (CTO):* «Høy gjennomsnittlig Recall er fint for en rapport.\n"
+                "> Men fortell meg dette: fungerer systemet like godt for brukerne\n"
+                "> som ser obskure dokumentarer som for dem som ser alt på forsiden?»\n\n"
                 "Se på grafen under — hvem tjener, og hvem taper?"
             ),
             code(
@@ -728,28 +966,80 @@ def nb03():
                 "print('Recall@K per brukergruppe (ALS):')\n"
                 "print(group_df.to_string(index=False))"
             ),
+            md(
+                "### MMR — Maximal Marginal Relevance\n\n"
+                "MMR er en re-rankeringsalgoritme som balanserer **relevans** mot **mangfold**.\n\n"
+                "Tenk på det som å lage en spilleliste: du vil ikke ha 10 like sanger på rad,\n"
+                "selv om de alle scorer høyt. MMR velger den neste filmen som er både relevant\n"
+                "*og* forskjellig fra det du allerede har valgt.\n\n"
+                "**Prosessen steg for steg:**\n\n"
+                "1. Start med en tom liste og et sett kandidater (f.eks. topp 100 fra ALS)\n"
+                "2. For hver gjenværende kandidat, beregn: λ · relevans − (1−λ) · likhet med det du allerede valgte\n"
+                "3. Velg kandidaten med høyest score, legg den til listen\n"
+                "4. Gjenta til listen har K filmer\n\n"
+                "`lambda_` styrer tradeoffet: λ = 1.0 betyr «bare relevans» (ingen diversitet),\n"
+                "λ = 0.3 betyr «prioriter mangfold tungt». Vi tester flere verdier:"
+            ),
             code(
-                "def apply_mmr(als_model, user_ids, train_matrix, genre_matrix, k=10, lambda_=0.6, n_cand=50):\n"
+                "def apply_mmr(als_model, user_ids, train_matrix, genre_matrix, k=10, lambda_=0.5, n_cand=100):\n"
                 "    candidate_ids, candidate_scores = als_model.recommend(user_ids, train_matrix[user_ids], N=n_cand, filter_already_liked_items=True)\n"
                 "    recommendations = np.zeros((len(user_ids), k), dtype=np.int32)\n"
                 "    for row_index in range(len(user_ids)):\n"
                 "        recommendations[row_index] = mmr_rerank(candidate_ids[row_index], candidate_scores[row_index], genre_matrix, k=k, lambda_=lambda_)\n"
                 "    return recommendations\n\n"
-                "recs_mmr = apply_mmr(als, user_ids, train_matrix, genre_matrix, k=K, lambda_=0.6)\n\n"
-                "rows = []\n"
-                "for name, recs in [('ALS', recs_als), ('ALS+MMR', recs_mmr)]:\n"
-                "    rows.append((name, recall_at_k(recs, test_items, K), coverage(recs, n_items, K), novelty(recs, item_pop_frac, K)))\n\n"
-                "print(f\"{'Modell':<10} {'Recall@10':>10} {'Coverage':>10} {'Novelty':>10}\")\n"
-                "print('-' * 46)\n"
-                "for name, recall_value, coverage_value, novelty_value in rows:\n"
-                "    print(f'{name:<10} {recall_value:>10.4f} {coverage_value:>10.4f} {novelty_value:>10.2f}')"
+                "# Vis tradeoff-gradienten: lambda_ styrer balansen relevans ↔ diversitet\n"
+                "print(f\"{'Modell':<16} {'Recall@10':>10} {'ILS (↓=bedre)':>14}\")\n"
+                "print('-' * 44)\n"
+                "for lam in [1.0, 0.7, 0.5, 0.3]:\n"
+                "    if lam == 1.0:\n"
+                "        recs = recs_als\n"
+                "        label = 'ALS (ingen MMR)'\n"
+                "    else:\n"
+                "        recs = apply_mmr(als, user_ids, train_matrix, genre_matrix, k=K, lambda_=lam)\n"
+                "        label = f'ALS+MMR \u03bb={lam}'\n"
+                "    r = recall_at_k(recs, test_items, K)\n"
+                "    ils = intra_list_similarity(recs, genre_matrix, K)\n"
+                "    print(f'{label:<16} {r:>10.4f} {ils:>14.4f}')\n\n"
+                "recs_mmr = apply_mmr(als, user_ids, train_matrix, genre_matrix, k=K, lambda_=0.5)"
             ),
             md(
-                "Recall går litt ned. Coverage og novelty går opp. Det er en **eksplisitt tradeoff** — ikke en feil.\n\n"
+                "**ILS** (intra-list similarity) måler gjennomsnittlig genre-likhet *innenfor* en brukers topp-10.\n"
+                "Lavere ILS = listene inneholder mer sjangermessig variasjon.\n\n"
+                "`coverage` og `novelty` er katalog-aggregater på tvers av alle brukere — de fanger ikke\n"
+                "within-user diversitet. ILS er det riktige målet her, og det beveger seg tydelig med \u03bb.\n\n"
+                "Re-ranking for mangfold er en **eksplisitt tradeoff**: litt lavere Recall mot\n"
+                "lister brukeren faktisk opplever som bredere. `lambda_` er parameteren du skrur på.\n\n"
                 "> 💬 **Diskuter**\n>\n"
                 "> 1. Hvem taper på en ren ALS-modell?\n"
-                "> 2. Hva vinner vi og hva taper vi når vi re-rangerer for mangfold?\n"
-                "> 3. Hva ville du fortalt Amira om systemets styrker og svakheter akkurat nå?"
+                "> 2. Hvilken `lambda_`-verdi ville du valgt for StreamNord? Hvorfor?\n"
+                "> 3. Hva ville du fortalt Amira om tradeoffet?"
+            ),
+            md(
+                "## 🔍 Når modeller feiler\n\n"
+                "Til nå har hver modell vært strengt bedre enn den forrige.\n"
+                "Men det er ikke hele sannheten. La oss se nærmere."
+            ),
+            code(
+                "# Finnes det brukere der ALS gjør det VERRE enn popularitet?\n"
+                "from src.recommenders.popularity import PopularityRecommender\n\n"
+                "pop_rec = PopularityRecommender().fit(train_matrix)\n"
+                "recs_pop = pop_rec.recommend(user_ids, train_matrix, K)\n\n"
+                "pop_hits = np.array([1 if test_items[i] in recs_pop[i] else 0 for i in range(len(user_ids))])\n"
+                "als_hits = np.array([1 if test_items[i] in recs_als[i] else 0 for i in range(len(user_ids))])\n\n"
+                "pop_wins = np.sum((pop_hits == 1) & (als_hits == 0))\n"
+                "als_wins = np.sum((als_hits == 1) & (pop_hits == 0))\n"
+                "print(f'Brukere der popularitet finner riktig, men ALS bommer: {pop_wins}')\n"
+                "print(f'Brukere der ALS finner riktig, men popularitet bommer: {als_wins}')\n"
+                "print(f'\\n→ ALS er bedre i gjennomsnitt, men popularitet vinner for {pop_wins} brukere.')"
+            ),
+            md(
+                "> *Amira:* «Så ingen modell er universelt best.\n"
+                "> Det er derfor vi trenger hybrider — og det er derfor vi måler på grupper, ikke bare gjennomsnitt.»\n\n"
+                "### Lærdom\n\n"
+                "- En modell med høyere gjennomsnittlig Recall kan likevel **tape** for spesifikke brukersegmenter\n"
+                "- Popularitet vinner ofte for brukere med mainstream-smak og lite historikk\n"
+                "- ALS kan overfit til majoritetsmønstre og bomme på nisjeprofiler\n"
+                "- **Tradeoffs er uunngåelige** — spørsmålet er hvem du prioriterer"
             ),
             md(
                 "---\n\n"
@@ -780,6 +1070,7 @@ def nb04():
     write_nb(
         "04_ship_decision.ipynb",
         [
+            # --- INTRO ---
             md(
                 "# 🚀 Notebook 04 — Sluttanbefaling\n\n"
                 "**Det er møtetid. Marte venter på svaret ditt.**\n\n"
@@ -794,7 +1085,7 @@ def nb04():
                 "from scipy.sparse import lil_matrix\n"
                 "from src.data import load_interactions, load_item_metadata, get_genre_matrix\n"
                 "from src.split import leave_one_out_split, build_sparse_matrix\n"
-                "from src.metrics import recall_at_k, ndcg_at_k, map_at_k, coverage, novelty\n"
+                "from src.metrics import recall_at_k, ndcg_at_k, map_at_k, coverage, novelty, intra_list_similarity\n"
                 "from src.rerank import mmr_rerank\n"
                 "from src.recommenders.popularity import PopularityRecommender\n"
                 "from src.recommenders.item_item import ItemItemRecommender\n"
@@ -814,10 +1105,11 @@ def nb04():
                 "LEA_ID = 451\n\n"
                 "print('Oppsett ferdig')"
             ),
+            # --- PART 1: EVIDENCE ---
             md(
                 "## 🏋️ Oppgave 6 — Leaderboard for modellfamiliene\n\n"
                 "Alle modellene side om side. Se ikke bare på Recall —\n"
-                "sjekk coverage og novelty. Hva forteller de?"
+                "sjekk coverage, novelty og ILS. Hva forteller de?"
             ),
             code(
                 "pop = PopularityRecommender().fit(train_matrix)\n"
@@ -843,54 +1135,15 @@ def nb04():
                 "        f'map@{K}': map_at_k(recs, test_items, K),\n"
                 "        f'coverage@{K}': coverage(recs, n_items, K),\n"
                 "        f'novelty@{K}': novelty(recs, item_pop, K),\n"
+                "        f'ILS@{K}': intra_list_similarity(recs, genre_matrix, K),\n"
                 "    }\n\n"
                 "leaderboard = pd.DataFrame(results).T.sort_values(f'ndcg@{K}', ascending=False)\n"
                 "print(leaderboard.to_string(float_format=lambda value: f'{value:.4f}'))"
             ),
             md(
-                "## 📋 Beslutningsmal\n\n"
-                "Fyll inn malen nedenfor før du skriver anbefalingen til Marte.\n"
-                "Ta den med deg etter workshopen — den er gjenbrukbar."
-            ),
-            code(
-                "# BESLUTNINGSMAL — Anbefalingssystem\n"
-                "#\n"
-                "# 1. SIGNALTYPE\n"
-                "#    Hovedsakelig eksplisitt / implisitt / begge: \n"
-                "#\n"
-                "# 2. ANBEFALT MODELLFAMILIE\n"
-                "#    Kjernemodell: \n"
-                "#    Hvorfor denne: \n"
-                "#\n"
-                "# 3. COLD-START-STRATEGI\n"
-                "#    For nye brukere: \n"
-                "#    For nye items: \n"
-                "#\n"
-                "# 4. FAIRNESS OG MANGFOLD\n"
-                "#    Hovedrisiko: \n"
-                "#    Tiltak: \n"
-                "#\n"
-                "# 5. PRODUKSJONSARKITEKTUR\n"
-                "#    Kandidatgenerering: \n"
-                "#    Rangering: \n"
-                "#    Re-rangering: \n"
-                "#\n"
-                "# 6. KJENTE RISIKOER\n"
-                "#    Hva kan gå galt: \n"
-                "#    Hva mangler vi data for: \n"
-            ),
-            md(
-                "## 🏋️ Oppgave 7 — Hva anbefaler du å shippe?\n\n"
-                "Bruk malen du nettopp fylte ut. Skriv en kort anbefaling til Marte — ikke tenk bare\n"
-                "på hva som vinner én metrikk, men på hvilket system som faktisk er mest realistisk."
-            ),
-            md(
-                "> **Skriv din anbefaling her**\n>\n"
-                "> *«Marte, basert på analysen anbefaler jeg ... fordi ...»*"
-            ),
-            md(
-                "## 🏋️ Oppgave 8 — Cold start\n\n"
-                "Hva skjer når en ny bruker dukker opp — og ALS har *ingenting* å jobbe med?"
+                "## 🏋️ Oppgave 7 — Cold start\n\n"
+                "Leaderboardet viser hvem som vinner med nok data.\n"
+                "Men hva skjer når en ny bruker dukker opp — og ALS har *ingenting* å jobbe med?"
             ),
             code(
                 "def evaluate_cold_start(als_rec, train_matrix, test_df, history_sizes=(1, 3, 5, 10, 20, 50), k=10):\n"
@@ -910,48 +1163,135 @@ def nb04():
                 "    return rows\n\n"
                 "cold_start_rows = evaluate_cold_start(als, train_matrix, test_df)\n"
                 "cold_start_df = pd.DataFrame(cold_start_rows)\n"
-                "print(cold_start_df.to_string(index=False))\n\n"
+                "print(cold_start_df.to_string(index=False))"
+            ),
+            code(
+                "# Popularitetsbaseline for sammenligning\n"
+                "pop_recall = recall_at_k(pop.recommend(user_ids, train_matrix, K), test_items, K)\n\n"
                 "fig, ax = plt.subplots(figsize=(8, 5))\n"
-                "ax.plot(cold_start_df['history_size'], cold_start_df[f'recall@{K}'], 'o-', linewidth=2)\n"
+                "ax.plot(cold_start_df['history_size'], cold_start_df[f'recall@{K}'], 'o-', linewidth=2, label='ALS')\n"
+                "ax.axhline(y=pop_recall, color='gray', linestyle='--', label=f'Popularitet ({pop_recall:.4f})')\n"
                 "ax.set_xlabel('Antall interaksjoner i historikk')\n"
                 "ax.set_ylabel(f'Recall@{K}')\n"
-                "ax.set_title('Cold-start: ALS-ytelse vs historikkstørrelse')\n"
+                "ax.set_title('Cold-start: når blir ALS bedre enn popularitet?')\n"
+                "ax.legend()\n"
                 "plt.tight_layout()\n"
-                "plt.show()"
+                "plt.show()\n"
+                "print('→ Under stiplet linje er popularitet faktisk bedre enn ALS.')"
+            ),
+            # --- PART 2: REFLECTION ---
+            md("## 🎬 Lea og Jonas gjennom workshopen\n\n"
+                "Før vi tar en beslutning — la oss se reisen. Hvordan har anbefalingene\n"
+                "til Lea og Jonas endret seg fra modell til modell?"
+            ),
+            code(
+                "LEA_ID = 451\n"
+                "JONAS_ID = 102\n"
+                "lea_idx = np.where(user_ids == LEA_ID)[0]\n"
+                "jonas_idx = np.where(user_ids == JONAS_ID)[0]\n\n"
+                "for uid, name, idx in [(LEA_ID, 'Lea', lea_idx), (JONAS_ID, 'Jonas', jonas_idx)]:\n"
+                "    if len(idx) > 0:\n"
+                "        print(f'\\n{name}s anbefalinger gjennom workshopen:')\n"
+                "        print('=' * 50)\n"
+                "        for model_name in ['Popularitet', 'Innholdsbasert', 'ALS', 'ALS+MMR']:\n"
+                "            rec_items = models[model_name][idx[0]]\n"
+                "            titles = items.set_index('item_id').loc[rec_items[:5], 'title'].values\n"
+                "            print(f'\\n  {model_name}:')\n"
+                "            for rank, title in enumerate(titles, 1):\n"
+                "                print(f'    {rank}. {title}')\n"
+                "print('\\n→ Lea gikk fra mainstream-spam til personlig. Jonas fikk bedre, men mindre dramatisk.')"
             ),
             md(
+                "### 🔄 Sjekk gjetningene fra starten\n\n"
+                "Gå tilbake til notebook 00 og les gjetningene du skrev ned.\n"
+                "Fyll inn tabellen under:\n\n"
+                "| # | Din gjetning | Hva som skjedde | Overrasket? |\n"
+                "|---|---|---|---|\n"
+                "| 1 | Hva Lea ville like: | | |\n"
+                "| 2 | Hva popularitetslisten inneholdt: | | |\n"
+                "| 3 | Popularitet for Lea vs Jonas: | | |\n"
+                "| 4 | Sikkerhet (1–5) — hadde du rett? | | |"
+            ),
+            # --- PART 3: FRAMEWORK ---
+            md(
                 "## Produksjonsarkitektur\n\n"
+                "Hvorfor ikke bare én modell? Fordi hvert steg har en jobb:\n\n"
                 "```\n"
                 "Kandidatgenerering  ->  Rangering  ->  Re-rangering\n"
                 "  (enkle signaler)      (sterk modell)     (fairness/regler)\n"
                 "```\n\n"
+                "- **Kandidatgenerering** siler ned fra 10 000 filmer til ~100 med raske, grove modeller (f.eks. popularitet eller enkel CF)\n"
+                "- **Rangering** scorer de ~100 nøyaktig med en tyngre modell (f.eks. ALS)\n"
+                "- **Re-rangering** justerer for mangfold, fairness og forretningsregler (f.eks. MMR)\n\n"
+                "Denne arkitekturen finnes i nesten alle store anbefalingssystemer — fra Netflix til Spotify.\n"
+                "Poenget er at ingen enkeltmodell kan gjøre alt: noen er raske men unøyaktige,\n"
+                "andre er nøyaktige men for trege til å kjøre på hele katalogen.\n\n"
                 "### En realistisk anbefaling\n\n"
                 "- bruk **ALS** eller en tilsvarende sterk collaborative modell som hovedmotor\n"
                 "- bruk **innholdsbaserte signaler** for cold start og forklarbarhet\n"
                 "- bruk **reranking** for mangfold, fairness og produktkrav\n"
                 "- legg til **kontekst** når det gir tydelig verdi"
             ),
-            md("## 🎬 Leas reise gjennom workshopen"),
+            # --- PART 4: DECISION ---
+            md(
+                "## 📋 Beslutningsmal\n\n"
+                "Nå har du sett bevisene (leaderboard + cold start), reisen (Lea og Jonas),\n"
+                "og rammeverket (produksjonsarkitektur). Fyll inn malen nedenfor.\n"
+                "Ta den med deg etter workshopen — den er gjenbrukbar.\n\n"
+                "**Eksempel** (seksjon 1): *«Hovedsakelig implisitt: vi har klikk og\n"
+                "avspillinger, men ingen ratings eller likes.»*"
+            ),
             code(
-                "lea_idx = np.where(user_ids == LEA_ID)[0]\n"
-                "if len(lea_idx) > 0:\n"
-                "    print('Leas anbefalinger gjennom workshopen:')\n"
-                "    print('=' * 50)\n"
-                "    for name in ['Popularitet', 'Innholdsbasert', 'ALS', 'ALS+MMR']:\n"
-                "        lea_recs = models[name][lea_idx[0]]\n"
-                "        titles = items.set_index('item_id').loc[lea_recs[:5], 'title'].values\n"
-                "        print(f'\\n{name}:')\n"
-                "        for rank, title in enumerate(titles, 1):\n"
-                "            print(f'  {rank}. {title}')\n"
-                "    print('\\n-> Fra mainstream-spam til en mer personlig og balansert liste.')"
+                "# BESLUTNINGSMAL — Anbefalingssystem\n"
+                "#\n"
+                "# 1. SIGNALTYPE\n"
+                "#    Hovedsakelig eksplisitt / implisitt / begge: \n"
+                "#    Hva betyr det for modellvalget?\n"
+                "#\n"
+                "# 2. ANBEFALT MODELLFAMILIE\n"
+                "#    Kjernemodell: \n"
+                "#    Hvorfor denne (maks 2 setninger): \n"
+                "#\n"
+                "# 3. COLD-START-STRATEGI\n"
+                "#    For nye brukere (< 5 interaksjoner): \n"
+                "#    For nye items (0 interaksjoner): \n"
+                "#    Hint: se cold-start-kurven over\n"
+                "#\n"
+                "# 4. FAIRNESS OG MANGFOLD\n"
+                "#    Hvem risikerer å få dårlige anbefalinger? \n"
+                "#    Hva gjør vi med det? \n"
+                "#\n"
+                "# 5. PRODUKSJONSARKITEKTUR\n"
+                "#    Kandidatgenerering (rask, grovfiltrering): \n"
+                "#    Rangering (sterk modell): \n"
+                "#    Re-rangering (produktregler): \n"
+                "#\n"
+                "# 6. KJENTE RISIKOER\n"
+                "#    Hva kan gå galt i produksjon? \n"
+                "#    Hva mangler vi data for? \n"
             ),
             md(
-                "### 🔄 Refleksjon — sjekk gjetningene fra starten\n\n"
-                "Gå tilbake til notebook 00 og les gjetningene du skrev ned.\n\n"
-                "> 1. Hva hadde du rett i?\n"
-                "> 2. Hva tok du feil om?\n"
-                "> 3. Hva overrasket deg mest gjennom hele workshopen?"
+                "## 🏋️ Oppgave 8 — Hva anbefaler du å shippe?\n\n"
+                "Bruk malen du nettopp fylte ut. Skriv en kort anbefaling til Marte — ikke tenk bare\n"
+                "på hva som vinner én metrikk, men på hvilket system som faktisk er mest realistisk."
             ),
+            md(
+                "> **Skriv din anbefaling her**\n>\n"
+                "> *«Marte, basert på analysen anbefaler jeg ... fordi ...»*"
+            ),
+            # --- PART 5: COMMUNICATION ---
+            md(
+                "### ✏️ Skriveøvelse — Forklar uten fagspråk\n\n"
+                "Amira ber deg forklare anbefalingen i et avsnitt til styret.\n\n"
+                "**Teknisk versjon** (IKKE send denne):\n"
+                "> *«Vi anbefaler ALS med 64 latente faktorer som oppnår Recall@10=0.12\n"
+                "> og NDCG@10=0.08. Re-ranking med MMR (λ=0.6) øker coverage fra 14% til 38%\n"
+                "> med akseptabelt Recall-tap på 0.01.»*\n\n"
+                "**Din oppgave:** Skriv dette om til **3–4 setninger** uten å bruke:\n"
+                "*faktorer, matrise, vektor, recall, coverage, lambda, re-ranking*\n\n"
+                "> *«Til styret: Vi anbefaler ... fordi ...»*"
+            ),
+            # --- PART 6: SUMMARY ---
             md(
                 "## 🔑 Oppsummering\n\n"
                 "| # | Lærdom |\n"
@@ -961,7 +1301,8 @@ def nb04():
                 "| 3 | **Metadata hjelper tidlig** — content-based filtering er nyttig, men begrenset |\n"
                 "| 4 | **Collaborative filtering skaper et hopp** — ALS lærer struktur metadata ikke ser |\n"
                 "| 5 | **Hybrider vinner i praksis** — produktkrav tvinger frem flere signaler |\n"
-                "| 6 | **Fairness må måles** — høy gjennomsnittlig relevans er ikke nok |\n\n"
+                "| 6 | **Fairness må måles** — høy gjennomsnittlig relevans er ikke nok |\n"
+                "| 7 | **Ingen modell er best for alle** — tradeoffs er uunngåelige, og kommunikasjon er en del av jobben |\n\n"
                 "### Ressurser\n\n"
                 "- Hu, Koren & Volinsky (2008): *Collaborative Filtering for Implicit Feedback*\n"
                 "- Koren, Bell & Volinsky (2009): *Matrix Factorization Techniques*\n"

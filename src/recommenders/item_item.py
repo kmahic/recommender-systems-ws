@@ -56,13 +56,11 @@ class ItemItemRecommender:
         assert self.similarity is not None, "Call .fit() first"
         results = np.zeros((len(user_ids), k), dtype=np.int32)
 
+        # Vectorized: sparse (n_users × n_items) @ dense (n_items × n_items) in one BLAS call
+        all_scores = train_matrix[user_ids].dot(self.similarity)  # (n_users, n_items)
+
         for i, uid in enumerate(user_ids):
-            user_vec = train_matrix[uid]  # sparse row
-            # Sum of similarity to interacted items -> score per item
-            scores = self.similarity @ user_vec.T  # (n_items, 1)
-            scores = np.asarray(scores).flatten()
-            # Mask already-seen items
-            scores[user_vec.indices] = -np.inf
-            top_k = np.argsort(-scores)[:k]
-            results[i] = top_k
+            scores = np.asarray(all_scores[i]).flatten() if hasattr(all_scores[i], 'A1') else all_scores[i]
+            scores[train_matrix[uid].indices] = -np.inf
+            results[i] = np.argsort(-scores)[:k]
         return results

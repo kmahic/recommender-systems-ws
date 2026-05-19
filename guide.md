@@ -12,6 +12,7 @@
 | `02_collaborative_filtering.ipynb` | CF og ALS | 45 min | Faktorsveip og tolkning |
 | `03_hybrid_systems.ipynb` | Hybrider, fairness og reranking | 60 min | Kalibrering |
 | `04_ship_decision.ipynb` | Sluttanbefaling og cold start | 30 min | — |
+| `05_veien_videre.ipynb` | Avanserte temaer for videre utforskning | Selvstudium | — |
 
 Alle hoveddelene følger mønsteret **kjør → observer → diskuter → beslutning**.
 
@@ -151,6 +152,31 @@ Målet er at deltakerne både skal kunne forklare **hva StreamNord bør bygge** 
 - workshopen skal ikke ende med “ALS vinner”, men med “et hybridoppsett er mest realistisk”
 - cold start er grunnen til at content-based filtering og produktgrep fortsatt er viktige
 - fairness og reranking er en del av produksjonsdesignet, ikke et ekstra vedheng
+
+## Notebook 05 — Veien videre
+
+### Mål
+
+- gi deltakerne en tydelig oversikt over hva som finnes *etter* workshopen
+- koble hvert avansert tema tilbake til noe de allerede har sett
+- motivere videre utforskning uten å overvelde
+
+### Innhold
+
+Seks temaer som pekere (ingen kode):
+
+1. **Learning-to-Rank** — BPR, LambdaMART; optimere for rangering, ikke rekonstruksjon
+2. **Bandits og utforskning** — explore-exploit; epsilon-greedy, UCB, Thompson sampling
+3. **Deep learning** — NCF, SASRec, BERT4Rec; når og hvorfor deep learning slår ALS
+4. **Kunnskapsgrafer og GNNs** — PinSage, KGAT; berike metadata med strukturert kunnskap
+5. **Reinforcement learning** — sekvensielle beslutninger; optimere for retention, ikke bare klikk
+6. **LLM-baserte anbefalinger** — item-forståelse, forklaringer, samtalebasert anbefaling
+
+### Det viktigste å si høyt
+
+- dette er selvstudium — workshopen er komplett uten denne notebooken
+- hvert tema er koblet tilbake til noe konkret fra workshopen
+- deltakerne bør velge **én** retning som matcher deres neste prosjekt
 
 ## Cheat Sheet — Oppgaver og diskusjonsspørsmål
 

@@ -26,7 +26,9 @@ TARGET_USERS = 15000
 SESSION_GAP_SECONDS = 7200  # 2 hours
 SEED = 42
 LEA_TARGET_ID = 451  # Lea's guaranteed user_id after reindexing
+JONAS_TARGET_ID = 102  # Jonas's guaranteed user_id after reindexing
 LEA_NICHE_GENRES = ["Drama", "Film-Noir", "Thriller"]
+JONAS_MAINSTREAM_GENRES = ["Action", "Adventure", "Sci-Fi"]
 
 
 def _download():
@@ -79,11 +81,36 @@ def _find_lea(df: pd.DataFrame, movies: pd.DataFrame) -> int:
     return int(best_user)
 
 
-def _filter_and_reindex(df: pd.DataFrame, lea_original_id: int | None = None) -> pd.DataFrame:
+def _find_jonas(df: pd.DataFrame, movies: pd.DataFrame) -> int:
+    """Find the best 'Jonas' candidate: a mainstream Action/Adventure/Sci-Fi user.
+
+    Returns the original ML-25M userId of the best candidate.
+    """
+    genre_exploded = movies.set_index("movieId")["genres"].str.split("|").explode()
+    mainstream_movies = set(
+        genre_exploded[genre_exploded.isin(JONAS_MAINSTREAM_GENRES)].reset_index()["movieId"].unique()
+    )
+
+    user_counts = df.groupby("userId").size().rename("total")
+    mainstream_mask = df["movieId"].isin(mainstream_movies)
+    mainstream_counts = df[mainstream_mask].groupby("userId").size().rename("mainstream")
+    scores = pd.concat([user_counts, mainstream_counts], axis=1).fillna(0)
+    scores["mainstream_share"] = scores["mainstream"] / scores["total"]
+
+    scores = scores[scores["total"] >= 100]
+    best_user = scores["mainstream_share"].idxmax()
+    print(f"  Jonas candidate: userId={best_user}, "
+          f"{int(scores.loc[best_user, 'total'])} interactions, "
+          f"{scores.loc[best_user, 'mainstream_share']:.1%} mainstream share")
+    return int(best_user)
+
+
+def _filter_and_reindex(df: pd.DataFrame, lea_original_id: int | None = None,
+                        jonas_original_id: int | None = None) -> pd.DataFrame:
     """Filter items by min interactions, then 0-index user and item IDs.
 
     If lea_original_id is given, swap the user mapping so Lea lands at
-    user_id=LEA_TARGET_ID (451).
+    user_id=LEA_TARGET_ID (451). Same for jonas_original_id at JONAS_TARGET_ID.
     """
     item_counts = df.groupby("movieId").size()
     keep_items = item_counts[item_counts >= MIN_ITEM_INTERACTIONS].index
@@ -96,13 +123,21 @@ def _filter_and_reindex(df: pd.DataFrame, lea_original_id: int | None = None) ->
     if lea_original_id is not None and lea_original_id in user_map:
         lea_natural_idx = user_map[lea_original_id]
         if lea_natural_idx != LEA_TARGET_ID and LEA_TARGET_ID < len(sorted_users):
-            # Find who currently sits at LEA_TARGET_ID
             occupant = sorted_users[LEA_TARGET_ID]
-            # Swap their positions
             user_map[lea_original_id] = LEA_TARGET_ID
             user_map[occupant] = lea_natural_idx
             print(f"  Planted Lea at user_id={LEA_TARGET_ID} "
                   f"(swapped with original userId={occupant})")
+
+    # Swap Jonas into position JONAS_TARGET_ID
+    if jonas_original_id is not None and jonas_original_id in user_map:
+        jonas_natural_idx = user_map[jonas_original_id]
+        if jonas_natural_idx != JONAS_TARGET_ID and JONAS_TARGET_ID < len(sorted_users):
+            occupant_id = [k for k, v in user_map.items() if v == JONAS_TARGET_ID][0]
+            user_map[jonas_original_id] = JONAS_TARGET_ID
+            user_map[occupant_id] = jonas_natural_idx
+            print(f"  Planted Jonas at user_id={JONAS_TARGET_ID} "
+                  f"(swapped with original userId={occupant_id})")
 
     item_map = {old: new for new, old in enumerate(sorted(df["movieId"].unique()))}
     df["user_id"] = df["userId"].map(user_map)
@@ -131,10 +166,11 @@ def sample_and_save():
     rng = np.random.default_rng(SEED)
     sampled = _sample_users(ratings, rng)
 
-    # Identify the best Lea candidate before reindexing
+    # Identify the best Lea and Jonas candidates before reindexing
     movies_raw = pd.read_csv(RAW_DIR / "movies.csv")
     lea_original_id = _find_lea(sampled, movies_raw)
-    filtered, item_map = _filter_and_reindex(sampled, lea_original_id)
+    jonas_original_id = _find_jonas(sampled, movies_raw)
+    filtered, item_map = _filter_and_reindex(sampled, lea_original_id, jonas_original_id)
     print(f"  Sampled: {len(filtered):,} interactions, "
           f"{filtered['user_id'].nunique():,} users, "
           f"{filtered['item_id'].nunique():,} items")

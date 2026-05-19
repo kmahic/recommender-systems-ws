@@ -8,16 +8,35 @@ style: |
   section {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   }
+  section.lead {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8edf5 100%);
+  }
   h1 { color: #1a1a2e; }
   h2 { color: #16213e; }
   blockquote { border-left: 4px solid #e94560; padding-left: 1em; }
 ---
+
+<!-- _class: lead -->
 
 # StreamNord
 
 ### En introduksjon til anbefalingssystemer
 
 På én workshop skal dere både forstå de viktigste modellfamiliene og anbefale hva StreamNord faktisk bør sette i produksjon.
+
+<!--
+SPEAKER NOTES:
+Åpne med produktspenning, ikke modellteori: "I morgen skal dere anbefale hva som faktisk går i produksjon."
+Spørsmål til rommet: "Hva er verst for et streamingprodukt: feil film i topp 1, eller 10 like filmer i topp 10?"
+Mål: Deltakerne skal forstå at dette er en beslutnings-workshop, ikke en ren algoritmegjennomgang.
+-->
+
+---
+
+<!-- _class: lead -->
+
+# Del 1
+## Case, mål og beslutningsramme
 
 ---
 
@@ -31,6 +50,15 @@ På én workshop skal dere både forstå de viktigste modellfamiliene og anbefal
 
 > Dette er ikke bare en modelløvelse. Det er en produktbeslutning.
 
+<!--
+SPEAKER NOTES:
+Etabler de tre perspektivene tidlig:
+- Lea: brukeropplevelse og relevans.
+- Marte: leveransepress og tid.
+- Amira: fairness, eksponering og bredde.
+Misforståelse å avklare: "best offline score" er ikke automatisk best produktvalg.
+-->
+
 ---
 
 ## To Spor Gjennom Workshopen
@@ -41,6 +69,12 @@ På én workshop skal dere både forstå de viktigste modellfamiliene og anbefal
 | Hvorfor popularitet ikke nok? | Hvordan evaluerer vi topp-N-anbefalinger? |
 | Hva kan vi gjøre bedre? | Hva er content-based, collaborative og matrix factorization? |
 | Hva bør vi shippe? | Hvorfor ender ekte systemer som hybrider? |
+
+<!--
+SPEAKER NOTES:
+Forklar at case-sporet og konseptsporet må holdes sammen hele veien.
+Intervensjon ved fastlåsing: Hvis gruppen blir for teknisk tidlig, trekk tilbake til Lea-spørsmålet.
+-->
 
 
 ---
@@ -56,6 +90,41 @@ Etter workshopen skal deltakerne kunne forklare:
 - hvorfor **matrix factorization** ble den klassiske arbeidshesten
 - hvorfor modne produkter ofte lander på **hybride systemer**
 
+<!--
+SPEAKER NOTES:
+Be deltakerne lese første og siste punkt høyt.
+Poeng: vi starter i signalforståelse og ender i systemdesign/produksjon.
+-->
+
+---
+
+## Beslutningskriterier (brukes gjennom hele dagen)
+
+Vi evaluerer alle forslag mot de samme kriteriene:
+
+| Kriterium | Praktisk spørsmål |
+|---|---|
+| Relevans | Treffer vi faktisk brukerens smak i topp-N? |
+| Personalisering | Blir listen vesentlig annerledes for ulike brukere? |
+| Fairness og mangfold | Eksponerer vi mer enn bare mainstream? |
+| Latens og kost | Kan dette kjøres stabilt i produksjon? |
+| Operasjonell risiko | Forstår vi failure modes og fallback? |
+
+> En modell "vinner" ikke før den også er driftsbar.
+
+<!--
+SPEAKER NOTES:
+Dette er anker-sliden for beslutning.
+Bruk den som referanse i hver notebook-overgang: "Hva lærte vi nå om kriterium X?"
+-->
+
+---
+
+<!-- _class: lead -->
+
+# Del 2
+## Flyt gjennom notebooks
+
 ---
 
 ## Workshop Arc
@@ -69,6 +138,14 @@ Etter workshopen skal deltakerne kunne forklare:
 | 2:30-3:00 | Hybrid og cold start | Hvorfor vinner kombinasjoner i praksis? |
 | 3:00-3:25 | Fairness og reranking | Er anbefalingene gode for flere enn mainstream? |
 | 3:25-3:50 | Sluttanbefaling | Hva bør StreamNord faktisk shippe? |
+
+<!--
+SPEAKER NOTES:
+Mikro-overganger:
+- Etter baseline: "Nå vet vi hva vi slår."
+- Etter content-based: "Nå har vi første personalisering."
+- Etter CF/ALS: "Nå lærer systemet av kollektive mønstre."
+-->
 
 ---
 
@@ -84,6 +161,38 @@ Etter workshopen skal deltakerne kunne forklare:
 
 Det tyngste stoffet er flyttet til appendix i stedet for å være egne hovednotebooks.
 
+<!--
+SPEAKER NOTES:
+Pek tydelig på at appendix er for fordypning, ikke blokkering.
+Rescue prompt ved tidspress: "Kjør kjerneceller først, appendix etterpå."
+-->
+
+---
+
+## Metodetaksonomi (for denne workshopen)
+
+| Familie | Hva den er best på | Typisk svakhet |
+|---|---|---|
+| Popularitetsbaseline | Robust start, enkel drift | Ingen ekte personalisering |
+| Innholdsbasert | Cold-start på nye items, forklarbarhet | Smale anbefalinger |
+| Collaborative / ALS | Sterk personalisering fra mønstre | Cold-start og sparsitet |
+| Hybrid + reranking | Balanserer relevans, fairness og policy | Mer kompleks drift |
+
+> Tommelfingerregel: bruk minst to signaltyper før produksjonsvalg.
+
+<!--
+SPEAKER NOTES:
+Denne sliden spiller samme rolle som metodeoversikten i XAI-decket.
+Mål: gi deltakerne et mentalt kart før de dykker i detaljer.
+-->
+
+---
+
+<!-- _class: lead -->
+
+# Del 3
+## Signal, metrikker og baseline
+
 ---
 
 ## Hvilket signal har vi?
@@ -96,6 +205,12 @@ Det tyngste stoffet er flyttet til appendix i stedet for å være egne hovednote
 For StreamNord er hovedsignalet **implisitt**: vi ser at Lea så noe, men ikke sikkert hvorfor.
 
 > Manglende interaksjon betyr ikke nødvendigvis avvisning.
+
+<!--
+SPEAKER NOTES:
+Kritisk avklaring: "No-click" kan bety både irrelevans, manglende synlighet eller tidsmangel.
+Spørsmål til rommet: "Hva mister vi når vi behandler manglende interaksjon som negativ feedback?"
+-->
 
 ---
 
@@ -112,6 +227,12 @@ Derfor bruker vi metrikker som:
 - **NDCG@K** — lå det høyt nok i listen?
 - **MAP@K** — hvor tidlig dukket treffene opp?
 
+<!--
+SPEAKER NOTES:
+Fremhev at metrikker er produktnære når de matcher UI-overflate (topp-N).
+Vanlig misforståelse: "høy RMSE" betyr ikke nødvendigvis dårlig listekvalitet.
+-->
+
 ---
 
 ## Popularitet: Sterk Baseline, svak Personalisering
@@ -127,6 +248,34 @@ Hvorfor den ikke løser Leas problem:
 - alle ser omtrent den samme listen
 - nisje-smak drukner i mainstream-signaler
 - høy gjennomsnittsscore kan skjule dårlige brukeropplevelser
+
+<!--
+SPEAKER NOTES:
+Be gruppen formulere ett scenario der popularitet faktisk er riktig valg (f.eks. ny markedslansering).
+Så kontrastér med Lea-caset for å tydeliggjøre begrensningen.
+-->
+
+---
+
+## Checkpoint 1: Hva har vi lært så langt?
+
+- Vi har et tvetydig, implisitt signal.
+- Vi må evaluere topp-N, ikke bare predikere rating.
+- Popularitet er nødvendig baseline, men utilstrekkelig for Lea.
+
+**Spørsmål til gruppen:** Hva må neste modell gjøre bedre enn popularitet for å være verdt kompleksiteten?
+
+<!--
+SPEAKER NOTES:
+Bruk 2-3 minutter til plenumsoppsummering før dere går videre til modellfamilier.
+-->
+
+---
+
+<!-- _class: lead -->
+
+# Del 4
+## Modellfamilier i praksis
 
 ---
 
@@ -149,6 +298,12 @@ Svakheter:
 
 For Lea er dette det første naturlige steget bort fra global popularitet.
 
+<!--
+SPEAKER NOTES:
+Foreslå en konkret failure mode: overfitting til sjangeretiketter gir lite serendipity.
+Intervensjon: spør hvordan man kan utvide feature-sett (metadata, embeddings, tekst).
+-->
+
 ---
 
 ## Modellfamilie 2: Collaborative Filtering
@@ -164,6 +319,12 @@ To nyttige innganger:
 - **user/item mønstre** som går utover eksplisitte features
 
 Dette er ofte punktet der systemet begynner å oppdage smak som metadata alene ikke fanger.
+
+<!--
+SPEAKER NOTES:
+Forklar intuitivt: "andre brukere fungerer som signalforsterkere."
+Misforståelse: CF er ikke magi; uten nok interaksjoner blir signalet svakt.
+-->
 
 ---
 
@@ -182,6 +343,12 @@ Hvorfor dette ble den klassiske arbeidshesten:
 
 I workshopen bruker vi **ALS** som den klareste introduksjonen til denne familien.
 
+<!--
+SPEAKER NOTES:
+Knytt latente faktorer til produktspråk: "smaksdimensjoner vi ikke har navngitt."
+Spørsmål: "Hva kan gå galt hvis vi kun optimaliserer for historisk engasjement?"
+-->
+
 ---
 
 ## Hvorfor Ekte Systemer Ender Som Hybrider
@@ -195,6 +362,36 @@ Ingen enkeltmodell løser hele produktproblemet:
 
 Det realistiske sluttpunktet er derfor ofte et **hybridsystem**.
 
+<!--
+SPEAKER NOTES:
+Dette er broen fra modell til system.
+Gjør det tydelig at hybrid ikke er "nice to have", men vanligvis nødvendig i produksjon.
+-->
+
+---
+
+## Checkpoint 2: Lea, Marte, Amira
+
+| Rolle | Hva trenger de nå? |
+|---|---|
+| Lea | Reell personalisering uten repetisjon |
+| Marte | En anbefaling som kan implementeres raskt |
+| Amira | Synlig kontroll på bias, eksponering og mangfold |
+
+> Hvis en løsning ignorerer én av disse, er den ikke produksjonsklar.
+
+<!--
+SPEAKER NOTES:
+Bruk denne til å få gruppen ut av ren modelltenkning og inn i produktbalanse.
+-->
+
+---
+
+<!-- _class: lead -->
+
+# Del 5
+## Begrensninger og beslutning
+
 ---
 
 ## De Virkelige Begrensningene
@@ -206,6 +403,33 @@ Det realistiske sluttpunktet er derfor ofte et **hybridsystem**.
 - **Fairness og mangfold** — hvem taper når vi maksimerer gjennomsnittlig relevans?
 
 Dette er der Amira kommer inn i historien.
+
+<!--
+SPEAKER NOTES:
+Ramme inn som risikoregister, ikke bare "ulemper".
+Be gruppen velge én risiko de ville monitorert fra dag 1 etter launch.
+-->
+
+---
+
+## Beslutningsmatrise før ship
+
+Skår hvert alternativ 1-5 på kriteriene under:
+
+| Alternativ | Relevans | Personalisering | Fairness | Latens/kost | Driftbarhet | Sum |
+|---|---:|---:|---:|---:|---:|---:|
+| Popularitet |  |  |  |  |  |  |
+| Content-based |  |  |  |  |  |  |
+| CF/ALS |  |  |  |  |  |  |
+| Hybrid + reranking |  |  |  |  |  |  |
+
+> Fylles ut i siste del av workshopen som grunnlag for anbefalingen.
+
+<!--
+SPEAKER NOTES:
+Insister på at de begrunner hver score med observasjoner fra notebooks.
+Mål: gjøre sluttrådet etterprøvbart, ikke intuitivt.
+-->
 
 ---
 
@@ -219,3 +443,8 @@ Ved slutten av workshopen skal deltakerne kunne si:
 - hvorfor den endelige anbefalingen sannsynligvis er **hybrid**
 
 > Åpne `notebooks/00_velkommen.ipynb` — vi begynner med Lea, dataene og signalet vi faktisk har.
+
+<!--
+SPEAKER NOTES:
+Avslutt med tydelig forventning: "I dag skal dere ikke bare lære modeller, men forsvare et produksjonsvalg."
+-->
