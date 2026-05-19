@@ -71,9 +71,6 @@ mange små notebookskifter:
 README.md
 Makefile
 pyproject.toml
-_gen_new_nbs.py          # genererer de konsoliderte notebookene
-slides/
-  slides.md              # Marp-lysbilder
 data/
   sample_ml25m.py        # laster ned ML-25M, sampler subset, lagrer parquet
   ml-25m-sample/         # (generert) parquet-filer
