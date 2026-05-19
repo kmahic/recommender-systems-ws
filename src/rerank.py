@@ -13,6 +13,8 @@ def category_constrained_rerank(
 ) -> np.ndarray:
     """Greedy re-ranking with per-genre caps.
 
+    Optional reference — not used in the workshop notebooks (mmr_rerank is used instead).
+
     Iterates through candidates in score order and adds an item only if
     none of its genres have exceeded ``max_per_genre`` in the output.
 

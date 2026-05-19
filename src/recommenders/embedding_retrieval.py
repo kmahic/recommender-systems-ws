@@ -1,4 +1,7 @@
-"""Embedding-based retrieval using FAISS for approximate nearest neighbor search."""
+"""Embedding-based retrieval using FAISS for approximate nearest neighbor search.
+
+Optional reference — not used in the workshop notebooks.
+"""
 
 import numpy as np
 

@@ -1,4 +1,7 @@
-"""Session-aware recommender using Markov chain transitions."""
+"""Session-aware recommender using Markov chain transitions.
+
+Optional reference — notebook 03 re-implements the Markov logic inline for pedagogical clarity.
+"""
 
 import numpy as np
 from scipy.sparse import lil_matrix

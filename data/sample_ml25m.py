@@ -27,7 +27,7 @@ SESSION_GAP_SECONDS = 7200  # 2 hours
 SEED = 42
 LEA_TARGET_ID = 451  # Lea's guaranteed user_id after reindexing
 JONAS_TARGET_ID = 102  # Jonas's guaranteed user_id after reindexing
-LEA_NICHE_GENRES = ["Drama", "Film-Noir", "Thriller"]
+LEA_NICHE_GENRES = ["Film-Noir", "War", "Documentary"]
 JONAS_MAINSTREAM_GENRES = ["Action", "Adventure", "Sci-Fi"]
 
 

@@ -4,17 +4,18 @@ __pycache__/
 *.pyo
 .venv/
 
+data/
 # Data
 data/ml-100k/
 
 # Outputs
-outputs/*.json
-outputs/*.csv
-outputs/*.png
+outputs/*
 
 # Slides build
-slides/*.html
+slides/
 
+_gen_new_nbs.py
+guide.md
 # Jupyter
 .ipynb_checkpoints/
 

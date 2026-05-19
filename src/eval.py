@@ -1,4 +1,7 @@
-"""Model evaluation orchestration and leaderboard display."""
+"""Model evaluation orchestration and leaderboard display.
+
+Optional reference — the workshop notebooks compute metrics inline.
+"""
 
 import numpy as np
 import pandas as pd

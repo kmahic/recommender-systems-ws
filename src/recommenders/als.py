@@ -28,15 +28,17 @@ class ALSRecommender:
             use_gpu=False,
         )
 
-    def fit(self, train_matrix: csr_matrix) -> "ALSRecommender":
+    def fit(self, train_matrix: csr_matrix, show_progress: bool = True) -> "ALSRecommender":
         """Fit ALS model on implicit interactions.
 
         Parameters
         ----------
         train_matrix : csr_matrix, shape (n_users, n_items)
             Binary interaction matrix (values are confidence weights).
+        show_progress : bool
+            Whether to show a progress bar during training.
         """
-        self.model.fit(train_matrix, show_progress=True)
+        self.model.fit(train_matrix, show_progress=show_progress)
         return self
 
     def recommend(
