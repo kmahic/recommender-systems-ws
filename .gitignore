@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Data
+data/ml-100k/
+
+# Outputs
+outputs/*.json
+outputs/*.csv
+outputs/*.png
+
+# Slides build
+slides/*.html
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
