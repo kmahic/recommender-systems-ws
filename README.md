@@ -1,8 +1,7 @@
 # StreamNord — Anbefalingssystemer Workshop
 
 En narrativ workshop på rundt 4 timer der deltakerne bruker **StreamNord-caset**
-til å forstå de viktigste modellfamiliene i anbefalingssystemer og ende med en
-begrunnet produksjonsanbefaling.
+til å forstå de viktigste modellfamiliene i anbefalingssystemer
 
 Workshopen følger to spor samtidig:
 
