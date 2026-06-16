@@ -1,4 +1,4 @@
-.PHONY: help setup data notebooks slides lab clean all reset
+.PHONY: help setup data notebooks slides pptx lab clean all reset
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -16,13 +16,16 @@ notebooks: ## Re-generate notebook .ipynb files
 slides: ## Render Marp slide deck to HTML
 	npx @marp-team/marp-cli slides/slides.md -o slides/slides.html --allow-local-files
 
+pptx: ## Render Marp slide deck to PowerPoint (.pptx)
+	npx @marp-team/marp-cli slides/slides.md -o slides/slides.pptx --pptx --allow-local-files
+
 lab: ## Launch JupyterLab
 	uv run jupyter lab --notebook-dir=notebooks
 
 clean: ## Remove downloaded data, outputs, and rendered slides
 	rm -rf data/ml-25m data/ml-25m-sample
 	rm -f outputs/*.json outputs/*.csv outputs/*.png
-	rm -f slides/*.html
+	rm -f slides/*.html slides/*.pptx
 
 reset: clean ## Full reset (clean + remove uv lockfile)
 	rm -rf .venv uv.lock
